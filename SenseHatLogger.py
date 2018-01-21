@@ -5,13 +5,17 @@ from datetime import datetime
 from sense_hat import SenseHat
 from time import sleep
 import time
+import sys
+import os
 from threading import Thread
 
-##### Logging Settings #####
+##### Default Logging Settings #####
 FILENAME = ""
+LOGNAME = "SenseHat"
+DATE_FORMAT = "epoch"
 WRITE_FREQUENCY = 1
 TEMP_H=True
-TEMP_P=False
+TEMP_P=True
 HUMIDITY=True
 PRESSURE=True
 ORIENTATION=True
@@ -23,6 +27,8 @@ DELAY=1
 ##### Functions #####
 def file_setup(filename):
     header =[]
+    header.append("timestamp")
+
     if TEMP_H:
         header.append("temp_h")
     if TEMP_P:
@@ -39,7 +45,6 @@ def file_setup(filename):
         header.extend(["accel_x","accel_y","accel_z"])
     if GYRO:
         header.extend(["gyro_x","gyro_y","gyro_z"])
-    header.append("timestamp")
 
     with open(filename,"w") as f:
         f.write(",".join(str(value) for value in header)+ "\n")
@@ -52,7 +57,10 @@ def log_data():
 def get_sense_data():
     sense_data=[]
 
-    sense_data.append(time.time())
+    if DATE_FORMAT.lower()=="epoch":
+        sense_data.append(time.time())
+    else:
+        sense_data.append(datetime.now())
     
     if TEMP_H:
         sense_data.append(sense.get_temperature_from_humidity())
@@ -94,7 +102,6 @@ def get_sense_data():
         gyro_z = gyro["z"]
         sense_data.extend([gyro_x,gyro_y,gyro_z])
 
-    sense_data.append(datetime.now())
 
     return sense_data
 
@@ -107,14 +114,17 @@ def timed_log():
 
 
 ##### Main Program #####
+##if __name__=="__main__":
+
 sense = SenseHat()
 batch_data= []
 
-if FILENAME == "":
-    filename = "SenseLog-"+str(datetime.now())+".csv"
+if len(sys.argv)>1:
+    path= sys.argv[1]
+    filename = sys.argv[1]+"-"+str(datetime.now())+".csv"
 else:
-    filename = FILENAME+"-"+str(datetime.now())+".csv"
-
+    filename = os.path.dirname(__file__) + "/" + LOGNAME + str(datetime.now())+".csv"
+    
 file_setup(filename)
 
 if DELAY > 0:
@@ -132,6 +142,5 @@ while True:
         with open(filename,"a") as f:
             for line in batch_data:
                 f.write(line + "\n")
-                print(line)
+                # print(line)
             batch_data = []
-
